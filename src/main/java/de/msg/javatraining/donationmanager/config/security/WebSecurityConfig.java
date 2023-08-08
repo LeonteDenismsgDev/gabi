@@ -17,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -36,11 +37,21 @@ public class WebSecurityConfig implements WebMvcConfigurer {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(request -> request.requestMatchers("/auth/**", "/app/test/**", "/users/**").permitAll() //these requests are allowed
-                        .anyRequest().authenticated()) //any other request must be authenticated
-                .sessionManagement(manager -> manager.sessionCreationPolicy(STATELESS)) // we don't want sessions
-                //TODO: we need a filter before UsernamePasswordAuthenticationFilter.class
-                .authenticationProvider(authenticationProvider()).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .cors(cors -> {
+                    cors.configurationSource(request -> {
+                        CorsConfiguration corsConfiguration = new CorsConfiguration();
+                        corsConfiguration.addAllowedOrigin("http://localhost:4200");
+                        corsConfiguration.addAllowedHeader("*");
+                        corsConfiguration.addAllowedMethod("*");
+                        corsConfiguration.setAllowCredentials(true);
+                        return corsConfiguration;
+                    });
+                })
+                .authorizeHttpRequests(request -> request.requestMatchers("/auth/**", "/app/test/**")
+                        .permitAll().anyRequest().authenticated())
+                .sessionManagement(manager -> manager.sessionCreationPolicy(STATELESS))
+                .authenticationProvider(authenticationProvider()).addFilterBefore(
+                        jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
